@@ -37,23 +37,18 @@ def xplr_predict (args, xplr):
     xplr_client.LOG('calling predict')
     params={}
     for param in ['model',
-                   'topics_limit',
-                   'elements_limit',
-                   'qualifiers',
-                   'content_extraction',
-                   'index',
-                   'recurrent',
-                   'labels',
-                   'words',
-                   'return_content',
-                   'return_title',
-                   'return_content_type',
-                   'return_image',
-                   'return_description',
-                   'return_excerpts',
-                   'return_url',
-                   'remote_user_agent',
-                   'idx_fields']:
+                  'topics_limit',
+                  'elements_limit',
+                  'qualifiers',
+                  'index',
+                  'index_override',
+                  'recurrent',
+                  'labels',
+                  'words',
+                  'filters_in',
+                  'filters_out',
+                  'remote_user_agent',
+                  'idx_fields']:
         if  param in dir(args) and getattr(args,param) is not None:
            params.update({param:getattr(args,param)}) 
     if args.url is not None:
@@ -120,11 +115,11 @@ def xplr_learn (args, xplr):
     dataset=xplr_client.XPLRDataset(arg.dataset)
     params={}
     for param in ['chunk_size',
-                   'content_extraction',
-                   'remote_user_agent']:
-        if  param in dir(args) and getattr(args,param) is not None:
-           params.update({param:getattr(args,param)}) 
-    
+                  'filter_in',
+                  'remote_user_agent']:
+        if param in dir(args) and getattr(args,param) is not None:
+            params.update({param:getattr(args,param)}) 
+           
     for resp in xplr.learn(dataset, args.model, **params):
         print "--- chunck ---"
         dformat(resp)
@@ -141,19 +136,20 @@ def xplr_recommend (args, xplr):
                   'related_topics_limit',
                   'elements_limit',
                   'qualifiers',
-                  'content_extraction',
                   'labels',
                   'words',
                   'date_from',
                   'date_to',
-                  'in_index']:
+                  'in_index',
+                  'filters_in',
+                  'extra_parameters',
+                  'remote_user_agent',
+                  ]:
         if  param in dir(args) and getattr(args,param) is not None:
            params.update({param:getattr(args,param)}) 
     
     if args.url is not None:
         # recommend from url
-        if args.content_extraction:
-            params.update({'content_extraction':args.content_extraction}) 
         dformat(xplr.recommend_uri(args.url, **params))
     else:
         # recommend from data on stdin
@@ -217,8 +213,10 @@ if __name__ == '__main__':
     parser.add_argument('-H','--host', action='store',help="XPLR API host")
     parser.add_argument('-P','--port', action='store',help="XPLR API port", type=int)
     parser.add_argument('-K','--key', action='store', help="XPLR API key")
-    #parser.add_argument("-S", "--ssl", action="store_true", default=True, help="use ssl on XPLR calls")
+    parser.add_argument("-S", "--ssl", action="store_true", default=True, help="use ssl on XPLR calls, default: true")
     
+    parser.add_argument('-A','--app', action='store', help="XPLR application used for index/search operations")
+
     subparsers = parser.add_subparsers(title='XPLR commands')
     
     # info
@@ -241,7 +239,7 @@ if __name__ == '__main__':
     # model creation
     parser_mc = subparsers_m.add_parser('create' ,help="Create new model")
     parser_mc.add_argument('-m','--topics_number', action='store',help="Number of topics created",type=int)
-    parser_mc.add_argument('-f','--fork', action='store',help="fork an existing model")
+    parser_mc.add_argument('-f','--fork', action='store',help="id of an existing model to fork")
     parser_mc.add_argument('-d','--description', action='store',help="long description")
     parser_mc.add_argument('-l','--lang', action='store',help="language")
     parser_mc.add_argument('-q','--qualifiers', nargs="*" ,help="qualifiers")
@@ -272,7 +270,7 @@ if __name__ == '__main__':
     parser_ps = parser_p.add_mutually_exclusive_group()
     parser_ps.add_argument('-u','--url', action='store',help="predict from url")
     parser_ps.add_argument('-f','--file', action='store',help="predict from file")
-    parser_ps.add_argument('-d','--dataset', action='store',help="predict from dataset")
+    # TODO parser_ps.add_argument('-d','--dataset', action='store',help="predict from dataset")
     # if non of u,f,d -> read data on stdin
     
     parser_p.add_argument('--uri', action='store',help="uri for indexation")
@@ -280,18 +278,23 @@ if __name__ == '__main__':
     parser_p.add_argument('--topics_limit', action='store',help="Number of topics predicted",type=int)
     parser_p.add_argument('--elements_limit', action='store',help="Number of elements within each topic")
     parser_p.add_argument('--qualifiers', action='store_true',help="Use qualifiers on topics")
-    parser_p.add_argument('--content_extraction', action='store_true',help="Try to extract text content")
     parser_p.add_argument('--index', action='store_true',help="Shall the document(s) be indexed by xplr")
+    parser_p.add_argument('--index_override', action='store_true',help="Whether to override the current document when indexing")
     parser_p.add_argument('--recurrent', action='store_true',help="Forces the creation of a new entry in XPLR index")
     parser_p.add_argument('--labels', action='store_true',help="Index and/or return topic labels")
     parser_p.add_argument('--words', action='store_true',help="Index and/or return topic words")
-    parser_p.add_argument('--return_content', action='store_true',help="Index and/or return text content")
-    parser_p.add_argument('--return_title', action='store_true',help="Index and/or return document title")
-    parser_p.add_argument('--return_content_type', action='store_true',help="Index and/or return mime content-type")
-    parser_p.add_argument('--return_image', action='store_true',help="Index and/or return relevant image")
-    parser_p.add_argument('--return_description', action='store_true',help="Index and/or return description")
-    parser_p.add_argument('--return_excerpts', action='store_true',help="Index and/or return excepts")
-    parser_p.add_argument('--return_url', action='store_true',help="Return document real url")
+
+    #parser_p.add_argument('--content_extraction', action='store_true',help="Try to extract text content")
+    #parser_p.add_argument('--return_content', action='store_true',help="Index and/or return text content")
+    #parser_p.add_argument('--return_title', action='store_true',help="Index and/or return document title")
+    #parser_p.add_argument('--return_content_type', action='store_true',help="Index and/or return mime content-type")
+    #parser_p.add_argument('--return_image', action='store_true',help="Index and/or return relevant image")
+    #parser_p.add_argument('--return_description', action='store_true',help="Index and/or return description")
+    #parser_p.add_argument('--return_excerpts', action='store_true',help="Index and/or return excepts")
+    #parser_p.add_argument('--return_url', action='store_true',help="Return document real url")
+    parser_p.add_argument('--filters_in',help="Preprocessing filters ",nargs='*',action="store")
+    parser_p.add_argument('--filters_out',help="Postprocessing filters ",nargs='*',action="store")
+
     parser_p.add_argument('--remote_user_agent', action='store',help="User agent string to be used by XPLR to fetch resources")
     parser_p.add_argument('--idx_fields',help="Extra indexation fields (sequence -x field value) ",nargs='*',action="append")
    
@@ -301,15 +304,34 @@ if __name__ == '__main__':
     # check coherence
     # recurrent requires index
     # idx_fields requires index
+    # index_override requires index
+    # idx_fileds is a dictionnary -> list of lists
+    # filters_in values are acceptable
+    # filters_out values are acceptable
     # url interdit uri
+
     parser_p.set_defaults(**defaults)
 
     # search 
     
-    parsers = subparsers.add_parser('search', help='Search XPLR topics index')
-    defaults=config.get("cli_search",{})
+    parser_s = subparsers.add_parser('search', help='Search in XPLR index by topics')
+    parser_s.add_argument('-q','--query', action='store',help="Search query")
+    parser_s.add_argument('--documents_limit', action='store',help="Maximum number of documents expected",type=int)
+    parser_s.add_argument('--document_topics_limit', action='store',help="Maximum number of topics expected per document",type=int)
+    parser_s.add_argument('--found_topics_limit', action='store',help="Maximum number of topics expected",type=int)
+    parser_s.add_argument('--related_topics_limit', action='store',help="Maximum number of related topics expected",type=int)
+    parser_s.add_argument('--elements_limit', action='store',help="Number of elements within each topic",type=int)
+    parser_s.add_argument('--use_fields', action='store_true',help="shall the search be performed on extra index fields")
+    parser_s.add_argument('--labels', action='store_true',help="Shall XPLR show topic labels")
+    parser_s.add_argument('--words', action='store_true',help="Shall XPLR show topic words")
+    parser_s.add_argument('--exact_match', action='store_true',help="Shall the match be an exact label or word")
+    parser_s.add_argument('--date_from', action='store',help="search in topics newer than")
+    parser_s.add_argument('--date_to', action='store',help="search in topics older than")
+    parser_s.add_argument('--extra_parameters', action='store',help="appended to the query string to underlying search system")
+    
+    defaults = config.get("cli_search",{})
     defaults.update({'callback':xplr_search})
-    parsers.set_defaults(**defaults)
+    parser_s.set_defaults(**defaults)
 
     # datasets
     parser_d = subparsers.add_parser('dataset', help='Create and manage datasets')
@@ -348,10 +370,10 @@ if __name__ == '__main__':
     # learn
     
     parser_l = subparsers.add_parser('learn', help='Learn')
-    parser_l.add_argument('-m','--model', action='store', required=True)
-    parser_l.add_argument('-d','--dataset', action='store', required=True)
-    parser_l.add_argument('-c','--chunk_size', action='store', type=int)
-    parser_l.add_argument('-x','--content_extraction', action='store_true')
+    parser_l.add_argument('-m','--model', action='store', required=True, help="selection of the model learned")
+    parser_l.add_argument('-d','--dataset', action='store', required=True, help="XPLRclient dataset")
+    parser_l.add_argument('-c','--chunk_size', action='store', type=int, help="number of document in the dataset sent for each learn query")
+    parser_l.add_argument('--filters_in', action='store', nargs='*', help="preprocessing filters")
     parser_l.add_argument('--remote_user_agent', action='store',help="User agent string to be used by XPLR to fetch resources")
 
     defaults=config.get("cli_learn",{})
@@ -361,8 +383,39 @@ if __name__ == '__main__':
     #recommend
     
     parser_r = subparsers.add_parser('recommend', help='Recommend')
-    parser_r.add_argument('-a','--app ', action='store')
+    parser_rs = parser_r.add_mutually_exclusive_group()
+    parser_rs.add_argument('-u','--url', action='store',help="predict from url")
+    parser_rs.add_argument('-f','--file', action='store',help="predict from file")
+    # TODO parser_rs.add_argument('-d','--dataset', action='store',help="predict from dataset")
+    # if non of u,f,d -> read data on stdin
+    
+    parser_r.add_argument('-m','--model', action='store',help="prediction model")
+    parser_r.add_argument('--documents_limit', action='store',help="Max number of documents expected",type=int)
+    parser_r.add_argument('--documents_topics_limit', action='store',help="Maximum number of topics expected per document",type=int)
+    parser_r.add_argument('--found_topics_limit', action='store',help="Maximum number of topics expected",type=int)
+    parser_r.add_argument('--related_topics_limit', action='store',help="Maximum number of related topics expected",type=int)
+    parser_r.add_argument('--elements_limit', action='store',help="Number of elements within each topic")
+    parser_r.add_argument('--qualifiers', action='store_true',help="Use qualifiers on topics")
+    parser_r.add_argument('--labels', action='store_true',help="Index and/or return topic labels")
+    parser_r.add_argument('--words', action='store_true',help="Index and/or return topic words")
+    parser_r.add_argument('--date_from', action='store',help="recommend in topics newer than")
+    parser_r.add_argument('--date_to', action='store',help="recommend in topics older than")
+
+    parser_r.add_argument('--in_index', action='store_true',help="Look up uri in application index")
+
+    #parser_r.add_argument('--content_extraction', action='store_true',help="Try to extract text content")
+    #parser_r.add_argument('--return_content', action='store_true',help="Index and/or return text content")
+    #parser_r.add_argument('--return_title', action='store_true',help="Index and/or return document title")
+    #parser_r.add_argument('--return_content_type', action='store_true',help="Index and/or return mime content-type")
+    #parser_r.add_argument('--return_image', action='store_true',help="Index and/or return relevant image")
+    #parser_r.add_argument('--return_description', action='store_true',help="Index and/or return description")
+    #parser_r.add_argument('--return_excerpts', action='store_true',help="Index and/or return excepts")
+    #parser_r.add_argument('--return_url', action='store_true',help="Return document real url")
+
+    parser_r.add_argument('--filters_in',help="Preprocessing filters ",nargs='*',action="store")
+
     parser_r.add_argument('--remote_user_agent', action='store',help="User agent string to be used by XPLR to fetch resources")
+    parser_r.add_argument('--extra_parameters', action='store',help="appended to the query string to underlying search system")
 
     defaults=config.get("cli_recommend",{})
     defaults.update({'callback':xplr_recommend})

@@ -90,7 +90,7 @@ class XPLR(object):
     __HTTP=0
     __HTTPS=1
     
-    def __init__(self, key, host, port=443, app=None, proto=1):
+    def __init__(self, key=None, host="api.xplr.com", port=443, app=None, proto=1):
         """XPLR class constructor
 
         Parameters:
@@ -224,7 +224,7 @@ class XPLR(object):
             qs += "&elements_limit=%d"%elements_limit
         return self.__get(qs)
     
-    def create_model(self, model, description, lang, qualifiers=None, fork=None, topics_number=None):
+    def create_model(self, model, description, lang, qualifiers=None, fork=None, topics_number=None, forkfile=None, forkkey=None):
         """Create a new model.
     
         Parameters:
@@ -242,6 +242,10 @@ class XPLR(object):
             body.update({"qualifiers":qualifiers})
         if fork is not None:
             body.update({"fork":fork})
+            if forkfile is not None:
+                body.update({"forkfile":forkfile})
+            if forkkey is not None:
+                body.update({"forkkey":forkkey})
         if  topics_number is not None:
             body.update({"topics_number":topics_number})
         return self.__put('/topics/models/%s'%model,json.dumps(body))
@@ -299,7 +303,7 @@ class XPLR(object):
 
         Parameters:
         uri -- the uri from which content is fetched
-        options -- all avalaible options from XPLR learn API
+        options -- all avalaible options from XPLR predict API method
         """
         
         params={}
@@ -314,7 +318,7 @@ class XPLR(object):
         content_type -- the mimetype of the content (used for content extraction)
         uri -- the unique identifier for indexing the document into XPLR
         title -- the title of the document
-        options -- all avalaible options from XPLR learn API
+        options -- all avalaible options from XPLR predict API method
         """
 
         params={}
@@ -326,7 +330,36 @@ class XPLR(object):
         return self.__post('/topics/predict', json.dumps(body))
 
 
-    # TODO : implement search & reco
+    def recommend_uri(self, uri, **options):
+        """Recommend from the content located at a given url.
+
+        Parameters:
+        uri -- the uri from which content is fetched
+        options -- all avalaible options from XPLR recommend API
+        """
+        
+        params={}
+        params.update(options)
+        body = {"parameters":params}
+        body.update({"document":{"uri":uri}})
+        return self.__post('/topics/recommend', json.dumps(body))
+
+    def recommend_content(self, data, content_type="text/plain", uri=str(uuid.uuid1()), title=None, **options):
+        """Recommend from a content from data
+        data -- the content to be predicted
+        content_type -- the mimetype of the content (used for content extraction)
+        uri -- the unique identifier for indexing the document into XPLR
+        title -- the title of the document
+        options -- all avalaible options from XPLR recommend API
+        """
+
+        params={}
+        params.update(options)
+        body = {"parameters":params}
+        body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
+        if title is not None:
+            body['document'].update({"title":title})
+        return self.__post('/topics/recommend', json.dumps(body))
 
 
     

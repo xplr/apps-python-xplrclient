@@ -150,14 +150,13 @@ XPLR models subcommands:
 see: https://xplr.com/base_api/method_predict
 
 $xplr_cli.py predict -h
-usage: xplr_cli.py predict [-h] [-u URL | -f FILE | -d DATASET] [--uri URI]
-                           [-m MODEL] [--topics_limit TOPICS_LIMIT]
+usage: xplr_cli.py predict [-h] [-u URL | -f FILE] [--uri URI] [-m MODEL]
+                           [--topics_limit TOPICS_LIMIT]
                            [--elements_limit ELEMENTS_LIMIT] [--qualifiers]
-                           [--content_extraction] [--index] [--recurrent]
-                           [--labels] [--words] [--return_content]
-                           [--return_title] [--return_content_type]
-                           [--return_image] [--return_description]
-                           [--return_excerpts] [--return_url]
+                           [--index] [--index_override] [--recurrent]
+                           [--labels] [--words]
+                           [--filters_in [FILTERS_IN [FILTERS_IN ...]]]
+                           [--filters_out [FILTERS_OUT [FILTERS_OUT ...]]]
                            [--remote_user_agent REMOTE_USER_AGENT]
                            [--idx_fields [IDX_FIELDS [IDX_FIELDS ...]]]
 
@@ -165,8 +164,6 @@ optional arguments:
   -h, --help            show this help message and exit
   -u URL, --url URL     predict from url
   -f FILE, --file FILE  predict from file
-  -d DATASET, --dataset DATASET
-                        predict from dataset
   --uri URI             uri for indexation
   -m MODEL, --model MODEL
                         prediction model
@@ -175,19 +172,15 @@ optional arguments:
   --elements_limit ELEMENTS_LIMIT
                         Number of elements within each topic
   --qualifiers          Use qualifiers on topics
-  --content_extraction  Try to extract text content
   --index               Shall the document(s) be indexed by xplr
+  --index_override      Whether to override the current document when indexing
   --recurrent           Forces the creation of a new entry in XPLR index
   --labels              Index and/or return topic labels
   --words               Index and/or return topic words
-  --return_content      Index and/or return text content
-  --return_title        Index and/or return document title
-  --return_content_type
-                        Index and/or return mime content-type
-  --return_image        Index and/or return relevant image
-  --return_description  Index and/or return description
-  --return_excerpts     Index and/or return excepts
-  --return_url          Return document real url
+  --filters_in [FILTERS_IN [FILTERS_IN ...]]
+                        Preprocessing filters
+  --filters_out [FILTERS_OUT [FILTERS_OUT ...]]
+                        Postprocessing filters
   --remote_user_agent REMOTE_USER_AGENT
                         User agent string to be used by XPLR to fetch
                         resources
@@ -200,12 +193,40 @@ optional arguments:
 see: https://xplr.com/base_api/method_search
 
 $xplr_cli.py search -h
-usage: xplr_cli.py search [-h]
+usage: xplr_cli.py search [-h] [-q QUERY] [--documents_limit DOCUMENTS_LIMIT]
+                          [--document_topics_limit DOCUMENT_TOPICS_LIMIT]
+                          [--found_topics_limit FOUND_TOPICS_LIMIT]
+                          [--related_topics_limit RELATED_TOPICS_LIMIT]
+                          [--elements_limit ELEMENTS_LIMIT] [--use_fields]
+                          [--labels] [--words] [--exact_match]
+                          [--date_from DATE_FROM] [--date_to DATE_TO]
+                          [--extra_parameters EXTRA_PARAMETERS]
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  -q QUERY, --query QUERY
+                        Search query
+  --documents_limit DOCUMENTS_LIMIT
+                        Maximum number of documents expected
+  --document_topics_limit DOCUMENT_TOPICS_LIMIT
+                        Maximum number of topics expected per document
+  --found_topics_limit FOUND_TOPICS_LIMIT
+                        Maximum number of topics expected
+  --related_topics_limit RELATED_TOPICS_LIMIT
+                        Maximum number of related topics expected
+  --elements_limit ELEMENTS_LIMIT
+                        Number of elements within each topic
+  --use_fields          shall the search be performed on extra index fields
+  --labels              Shall XPLR show topic labels
+  --words               Shall XPLR show topic words
+  --exact_match         Shall the match be an exact label or word
+  --date_from DATE_FROM
+                        search in topics newer than
+  --date_to DATE_TO     search in topics older than
+  --extra_parameters EXTRA_PARAMETERS
+                        appended to the query string to underlying search
+                        system
 
-NOTE : not yet implemented
 
 #### dataset command
 
@@ -229,31 +250,70 @@ XPLR dataset subcommands:
 see: https://xplr.com/base_api/method_learn
 
 $xplr_cli.py learn -h
-usage: xplr_cli.py learn [-h] -m MODEL -d DATASET [-c CHUNK_SIZE] [-x]
+usage: xplr_cli.py learn [-h] -m MODEL -d DATASET [-c CHUNK_SIZE]
+                         [--filters_in [FILTERS_IN [FILTERS_IN ...]]]
                          [--remote_user_agent REMOTE_USER_AGENT]
 
 optional arguments:
   -h, --help            show this help message and exit
   -m MODEL, --model MODEL
+                        selection of the model learned
   -d DATASET, --dataset DATASET
+                        XPLRclient dataset
   -c CHUNK_SIZE, --chunk_size CHUNK_SIZE
-  -x, --content_extraction
+                        number of document in the dataset sent for each learn
+                        query
+  --filters_in [FILTERS_IN [FILTERS_IN ...]]
+                        preprocessing filters
   --remote_user_agent REMOTE_USER_AGENT
                         User agent string to be used by XPLR to fetch
                         resources
-
 
 #### recommend command
 
 see: https://xplr.com/base_api/method_recommend
 
 $xplr_cli.py recommend -h
-usage: xplr_cli.py recommend [-h] [-a APP]
+usage: xplr_cli.py recommend [-h] [-u URL | -f FILE] [-m MODEL]
+                             [--documents_limit DOCUMENTS_LIMIT]
+                             [--documents_topics_limit DOCUMENTS_TOPICS_LIMIT]
+                             [--found_topics_limit FOUND_TOPICS_LIMIT]
+                             [--related_topics_limit RELATED_TOPICS_LIMIT]
+                             [--elements_limit ELEMENTS_LIMIT] [--qualifiers]
+                             [--labels] [--words] [--date_from DATE_FROM]
+                             [--date_to DATE_TO] [--in_index]
+                             [--filters_in [FILTERS_IN [FILTERS_IN ...]]]
                              [--remote_user_agent REMOTE_USER_AGENT]
+                             [--extra_parameters EXTRA_PARAMETERS]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -a APP , --app  APP 
+  -u URL, --url URL     predict from url
+  -f FILE, --file FILE  predict from file
+  -m MODEL, --model MODEL
+                        prediction model
+  --documents_limit DOCUMENTS_LIMIT
+                        Max number of documents expected
+  --documents_topics_limit DOCUMENTS_TOPICS_LIMIT
+                        Maximum number of topics expected per document
+  --found_topics_limit FOUND_TOPICS_LIMIT
+                        Maximum number of topics expected
+  --related_topics_limit RELATED_TOPICS_LIMIT
+                        Maximum number of related topics expected
+  --elements_limit ELEMENTS_LIMIT
+                        Number of elements within each topic
+  --qualifiers          Use qualifiers on topics
+  --labels              Index and/or return topic labels
+  --words               Index and/or return topic words
+  --date_from DATE_FROM
+                        recommend in topics newer than
+  --date_to DATE_TO     recommend in topics older than
+  --in_index            Look up uri in application index
+  --filters_in [FILTERS_IN [FILTERS_IN ...]]
+                        Preprocessing filters
   --remote_user_agent REMOTE_USER_AGENT
                         User agent string to be used by XPLR to fetch
                         resources
+  --extra_parameters EXTRA_PARAMETERS
+                        appended to the query string to underlying search
+                        system
