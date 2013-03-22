@@ -66,7 +66,7 @@ import xplr_client
 config = xplr_client.Config()
 
 # instanciate xplr client object
-xplr=xplr_client.XPLR(config.get('key'), config.get('host'), port = int(config.get('port')))
+xplr=xplr_client.XPLR(config.get('xplr'))
 
 # call prediction on a text buffer :
 prediction = xplr.predict_content(buffer)
