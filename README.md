@@ -59,7 +59,7 @@ When used, the configuration file must contain an [xplr] section, with host, por
 The basic usage for the XPLR client module in python (2.7) is to instanciate an XPLR object, providing general config parameters (host, port, api key, app), and use this object to call XPLR api methods. Otherwise stated, the parameters are the same as [XPLR API](https://xplr.com/base_api/) parameters. 
 
 Basic usage for predict:
-
+<pre>
 import xplr_client
 
 # read config file, defaults to ~/.xplrclient, alternate can be passed as alternatfile parameter
@@ -68,11 +68,11 @@ config = xplr_client.Config()
 # instanciate xplr client object
 xplr=xplr_client.XPLR(config.get('key'), config.get('host'), port = int(config.get('port')))
 
-# call rpediction on a text buffer :
+# call prediction on a text buffer :
 prediction = xplr.predict_content(buffer)
 
 # prediction is a python dict reflecting the structure of the XPLR JSON response
-
+</pre>
 
 
 ### XPLR Command line interface
@@ -80,15 +80,12 @@ prediction = xplr.predict_content(buffer)
 The command line interface is based on the python client modul and provides an easy access to the XPLR API with command line and shell tools.
 
 * Read configuration from ini file
-
 * Read content from unix pipes
-
 * Manage datasets
-
 * Complete coverage of XPLR API
 
 *Usage*
-
+<pre>
 $xplr_cli.py -h
 
 usage: xplr_cli.py [-h] [-v] [-q] [-C FILE] [-H HOST] [-P PORT] [-K KEY]
@@ -115,23 +112,28 @@ XPLR commands:
     dataset             Create and manage datasets
     learn               Learn
     recommend           Recommend
-
+</pre>
 
 
 #### info command
 
 see: https://xplr.com/base_api/method_info
 
+Usage
+<pre>
 $xplr_cli.py info -h
 usage: xplr_cli.py info [-h]
 
 optional arguments:
   -h, --help  show this help message and exit
+</pre>
 
 #### model command
 
 see: https://xplr.com/base_api/method_model
 
+Usage
+<pre>
 $xplr_cli.py model -h
 usage: xplr_cli.py model [-h] {info,create,update,delete} ...
 
@@ -144,11 +146,14 @@ XPLR models subcommands:
     create              Create new model
     update              Update model
     delete              Delete model
+</pre>
 
 #### predict command
 
 see: https://xplr.com/base_api/method_predict
 
+Usage
+<pre>
 $xplr_cli.py predict -h
 usage: xplr_cli.py predict [-h] [-u URL | -f FILE] [--uri URI] [-m MODEL]
                            [--topics_limit TOPICS_LIMIT]
@@ -187,11 +192,14 @@ optional arguments:
   --idx_fields [IDX_FIELDS [IDX_FIELDS ...]]
                         Extra indexation fields (sequence -x field value)
 
+</pre>
 
 #### search command
 
 see: https://xplr.com/base_api/method_search
 
+Usage
+<pre>
 $xplr_cli.py search -h
 usage: xplr_cli.py search [-h] [-q QUERY] [--documents_limit DOCUMENTS_LIMIT]
                           [--document_topics_limit DOCUMENT_TOPICS_LIMIT]
@@ -227,11 +235,14 @@ optional arguments:
                         appended to the query string to underlying search
                         system
 
+</pre>
 
 #### dataset command
 
 Prepares local datasets to be learned by XPLR
 
+Usage
+<pre>
 $xplr_cli.py dataset -h
 usage: xplr_cli.py dataset [-h] {info,add,delete} ...
 
@@ -244,11 +255,14 @@ XPLR dataset subcommands:
     info             Get dataset info
     add              add a document to dataset
     delete           Delete dataset
+</pre>
 
 #### learn command
 
 see: https://xplr.com/base_api/method_learn
 
+Usage
+<pre>
 $xplr_cli.py learn -h
 usage: xplr_cli.py learn [-h] -m MODEL -d DATASET [-c CHUNK_SIZE]
                          [--filters_in [FILTERS_IN [FILTERS_IN ...]]]
@@ -268,11 +282,14 @@ optional arguments:
   --remote_user_agent REMOTE_USER_AGENT
                         User agent string to be used by XPLR to fetch
                         resources
+</pre>
 
 #### recommend command
 
 see: https://xplr.com/base_api/method_recommend
 
+Usage
+<pre>
 $xplr_cli.py recommend -h
 usage: xplr_cli.py recommend [-h] [-u URL | -f FILE] [-m MODEL]
                              [--documents_limit DOCUMENTS_LIMIT]
@@ -317,3 +334,5 @@ optional arguments:
   --extra_parameters EXTRA_PARAMETERS
                         appended to the query string to underlying search
                         system
+
+</pre>
