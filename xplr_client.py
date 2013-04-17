@@ -350,6 +350,17 @@ class XPLR(object):
         return self.__post(self.__urls["predict"], json.dumps(body))
 
 
+    def search(self, query, **options):
+        """Search in the XPLR index
+        query -- the searched words
+        options -- all avalaible options from XPLR recommend API
+        """
+        params={}
+        params.update({'q':query})
+        params.update(options)
+        body = {"parameters":params}
+        return self.__post(self.__urls["search"], json.dumps(body))
+
     def recommend_uri(self, uri, **options):
         """Recommend from the content located at a given url.
 
