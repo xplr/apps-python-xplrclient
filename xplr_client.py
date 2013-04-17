@@ -71,6 +71,25 @@ def Config(appspec = None, alternatefile = None):
             res.update({sect:{}})
     return res
 
+API_METHODS_URL = {
+    "1.15e" : {
+        "info":"/topics/info",
+        "model":"/topics/models",
+        "learn":"/topics/learn",
+        "predict":"/topics/predict",
+        "search":"/topics/search",
+        "recommend":"/topics/recommend",
+        },
+    "1.15f" : {
+        "info":"/info",
+        "model":"/models",
+        "learn":"/learn",
+        "predict":"/predict",
+        "search":"/search",
+        "recommend":"/recommend",
+        }
+}
+
 
 class XPLR(object):
     """Handle http requests to the XPLR server.
@@ -90,7 +109,7 @@ class XPLR(object):
     __HTTP=0
     __HTTPS=1
     
-    def __init__(self, key=None, host="api.xplr.com", port=443, app=None, proto=1):
+    def __init__(self, key=None, host="api.xplr.com", port=443, app=None, proto=1, apiversion='1.15e'):
         """XPLR class constructor
 
         Parameters:
@@ -100,7 +119,8 @@ class XPLR(object):
         app -- the XPLR application id to be used for indexing/search operations
         proto -- use https (1, default) or http connexion
         """
-
+        self.apiversion = apiversion
+        self.__urls = API_METHODS_URL[apiversion]
         self.__key=key
         self.__host=host
         self.__port=port
@@ -191,7 +211,7 @@ class XPLR(object):
 
     def info(self):
         """Get information on the XPLR API server : avaliable model"""
-        return self.__get('/topics/info')
+        return self.__get(self.__urls["info"])
 
 
     # models
@@ -207,7 +227,7 @@ class XPLR(object):
         element_limit -- max number of words/labels to be returned
         """
 
-        qs="/topics/models/%s"%model
+        qs=self.__urls["models"] + "/%s"%model
         if topic_ids:
             qs += "?topic_ids=true"
         else:
@@ -248,13 +268,13 @@ class XPLR(object):
                 body.update({"forkkey":forkkey})
         if  topics_number is not None:
             body.update({"topics_number":topics_number})
-        return self.__put('/topics/models/%s'%model,json.dumps(body))
+        return self.__put(self.__urls["models"] + '/%s'%model,json.dumps(body))
 
 
     def delete_model(self,model):
         """Delete an existing model associated to the API key."""
 
-        return self.__delete('/topics/models/%s'%model)
+        return self.__delete(self.__urls["models"] + '/%s'%model)
 
     def update_model(self, model, update_words=True, auto_labeling=True, labels=None):
         """Update an existing model associated to tu user API key.
@@ -271,7 +291,7 @@ class XPLR(object):
                 "auto_labeling":auto_labelling}
         if labels is not None:
             body.update({"labels":labels})
-        return self.__post('/topics/models/%s'%model, json.dumps(body))
+        return self.__post(self.__urls["models"] + '/%s'%model, json.dumps(body))
 
     
     # learn (iterator)
@@ -293,7 +313,7 @@ class XPLR(object):
         body = {"parameters":params}
         for docs in dataset.iterdocs(chunk_size):
             body.update({"collection":docs})
-            yield self.__post('/topics/learn', json.dumps(body))
+            yield self.__post(self.__urls["learn"], json.dumps(body))
         return 
 
     # predict
@@ -310,7 +330,7 @@ class XPLR(object):
         params.update(options)
         body = {"parameters":params}
         body.update({"document":{"uri":uri}})
-        return self.__post('/topics/predict', json.dumps(body))
+        return self.__post(self.__urls["predict"], json.dumps(body))
 
     def predict_content(self, data, content_type="text/plain", uri=str(uuid.uuid1()), title=None, **options):
         """Predict a content from data
@@ -327,7 +347,7 @@ class XPLR(object):
         body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
         if title is not None:
             body['document'].update({"title":title})
-        return self.__post('/topics/predict', json.dumps(body))
+        return self.__post(self.__urls["predict"], json.dumps(body))
 
 
     def recommend_uri(self, uri, **options):
@@ -342,7 +362,7 @@ class XPLR(object):
         params.update(options)
         body = {"parameters":params}
         body.update({"document":{"uri":uri}})
-        return self.__post('/topics/recommend', json.dumps(body))
+        return self.__post(self.__urls["recommend"], json.dumps(body))
 
     def recommend_content(self, data, content_type="text/plain", uri=str(uuid.uuid1()), title=None, **options):
         """Recommend from a content from data
@@ -359,7 +379,7 @@ class XPLR(object):
         body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
         if title is not None:
             body['document'].update({"title":title})
-        return self.__post('/topics/recommend', json.dumps(body))
+        return self.__post(self.__urls["recommend"], json.dumps(body))
 
 
     
