@@ -71,6 +71,56 @@ def Config(appspec = None, alternatefile = None):
             res.update({sect:{}})
     return res
 
+
+### Exception classes :
+
+class XPLRCommunicationError(Exception):
+    def __init__(self, url, http_method,  headers, body, response=None):
+        self.msg = """XPLR Communication Error"""
+        self.http_method = http_method
+        self.req_headers = headers
+        self.req_body = body
+        self.url = url
+        self.res_headers = response.get_info()
+
+    def __str__(self):
+        msg = "%s %s\n"%(str(self.http_method),str(self.url))
+        for h,v in self.req_headers.iteritems():
+            msg += "%s:%s\n"%(h,v)
+        msg += "\n"
+        if self.req_body is not None:
+            msg += str(self.req_body)
+        msg += "\n"
+        msg += "--\n"
+        msg += str(self.res_headers)
+        msg += "\n"
+        return str
+
+
+
+class XPLRDataError(Exception):
+    def __init__(self, url, http_method,  headers, body, data=None):
+        self.msg = "XPLR Data Error"
+        self.http_method = http_method
+        self.req_headers = headers
+        self.req_body = body
+        self.url = url
+        self.data = data
+
+    def __str__(self):
+        msg = "%s %s\n"%(str(self.http_method),str(self.url))
+        for h,v in self.req_headers.iteritems():
+            msg += "%s:%s\n"%(h,v)
+        msg += "\n"
+        if self.req_body is not None:
+            msg += str(self.req_body)
+        msg += "\n"
+        msg += "--\n"
+        msg += str(self.data)
+        msg += "\n"
+        return str
+
+
 API_METHODS_URL = {
     "1.15e" : {
         "info":"/topics/info",
@@ -109,7 +159,7 @@ class XPLR(object):
     __HTTP=0
     __HTTPS=1
     
-    def __init__(self, key=None, host="api.xplr.com", port=443, app=None, proto=1, apiversion='1.15e'):
+    def __init__(self, key=None, host="api.xplr.com", port=443, app=None, proto=1, apiversion='1.15f'):
         """XPLR class constructor
 
         Parameters:
@@ -147,65 +197,125 @@ class XPLR(object):
                     u += urllib2.quote(argv)
                     
         LOG("GET %s"%u)
-        req = urllib2.Request(u)
-        req.add_header('XPLR-Api-Key',self.__key)
-        if self.__app is not None:
-            req.add_header('XPLR-App-id',self.__app)
-        response = urllib2.urlopen(req)
-        jsonresponse=response.read()
+        response = None
+        headers = {}
+        try:
+            req = urllib2.Request(u)
+            req.add_header('XPLR-Api-Key',self.__key)
+            headers.update({'XPLR-Api-Key':self.__key})
+            if self.__app is not None:
+                req.add_header('XPLR-App-id',self.__app)
+                headers.update({'XPLR-App-id':self.__app})
+            response = urllib2.urlopen(req)
+            jsonresponse=response.read()
+        except:
+            raise XPLRCommunicationError(u,"GET",headers,None,response)
         LOG(jsonresponse)
-        return json.loads(jsonresponse)
+        try:
+            return json.loads(jsonresponse)
+        except:
+            raise XPLRDataError(u,"GET",headers,None,jsonresponse)
 
     def __put(self, method, body):
         """Perform a PUT request to xplr."""
 
         LOG("PUT %s\n%s"%(method,body))
-        if self.__proto == self.__HTTP:
-            c=httplib.HTTPConnection(self.__host,self.__port)
-        else:
-            c=httplib.HTTPSConnection(self.__host,self.__port)
-        headers={'XPLR-Api-Key':self.__key}
-        if self.__app is not None:
-            headers.update({'XPLR-App-id':self.__app})
-        c.request('PUT',method,body,headers)
-        r = c.getresponse()
-        data = r.read()
+        r = None
+        u = ""
+        headers = {}
+        try:
+            if self.__proto == self.__HTTP:
+                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                c=httplib.HTTPConnection(self.__host,self.__port)
+            else:
+                u = "https://%s:%s/%s"%(self.__host,self.__port,method)
+                c=httplib.HTTPSConnection(self.__host,self.__port)
+            headers.update({'XPLR-Api-Key':self.__key})
+            if self.__app is not None:
+                headers.update({'XPLR-App-id':self.__app})
+            c.request('PUT',method,body,headers)
+            r = c.getresponse()
+            data = r.read()
+        except:
+            raise XPLRCommunicationError(u,"PUT",headers,body,r)
+
         LOG(data)
-        return json.loads(data)
+        try:
+            return json.loads(data)
+        except:
+            raise XPLRDataError(u,"PUT",headers,body,data)
     
     def __post(self, method, body):
         """Perform a POST request to xplr."""
 
-        LOG("POST %s %s"%(method,body))
-        if self.__proto == self.__HTTP:
-            c=httplib.HTTPConnection(self.__host,self.__port)
-        else:
-            c=httplib.HTTPSConnection(self.__host,self.__port)
-        headers={'XPLR-Api-Key':self.__key}
-        if self.__app is not None:
-            headers.update({'XPLR-App-id':self.__app})
-        c.request('POST',method,body,headers)
-        r = c.getresponse()
-        data = r.read()
+        r = None
+        u = ""
+        headers = {}
+        try:
+            if self.__proto == self.__HTTP:
+                LOG("curl -x POST 'http://%s:%s/%s' -H 'XPLR-Api-Key:%s' -H 'XPLR-App-id:%s' -d '%s'"%(self.__host,
+                                                                                                       self.__port,
+                                                                                                       method,
+                                                                                                       self.__key,
+                                                                                                       self.__app,
+                                                                                                       body))
+                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                c=httplib.HTTPConnection(self.__host,self.__port)
+            else:
+                LOG("curl -k -x POST 'https://%s:%s/%s' -H 'XPLR-Api-Key:%s' -H 'XPLR-App-id:%s' -d '%s'"%(self.__host,
+                                                                                                           self.__port,
+                                                                                                           method,
+                                                                                                           self.__key,
+                                                                                                           self.__app,
+                                                                                                           body))
+                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                c=httplib.HTTPSConnection(self.__host,self.__port)
+
+            headers.update({'XPLR-Api-Key':self.__key})
+            if self.__app is not None:
+                headers.update({'XPLR-App-id':self.__app})
+            c.request('POST',method,body,headers)
+            r = c.getresponse()
+            data = r.read()
+            
+        except:
+            raise XPLRCommunicationError(u,"POST",headers,body,r)
+
         LOG(data)
-        return json.loads(data)
-    
+        try:
+            return json.loads(data)
+        except:
+            raise XPLRDataError(u,"POST",headers,body,data)
+ 
     def __delete(self, method):
         """Perform a DELETE request to xplr."""
 
         LOG("DELETE %s"%(method))
-        if self.__proto == self.__HTTP:
-            c=httplib.HTTPConnection(self.__host,self.__port)
-        else:
-            c=httplib.HTTPSConnection(self.__host,self.__port)
-        headers={'XPLR-Api-Key':self.__key}
-        if self.__app is not None:
-            headers.update({'XPLR-App-id':self.__app})
-        c.request('DELETE',method,body,headers)
-        r = c.getresponse()
-        data = r.read()
+        r = None
+        u = ""
+        headers = {}
+        try:
+            if self.__proto == self.__HTTP:
+                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                c=httplib.HTTPConnection(self.__host,self.__port)
+            else:
+                u = "https://%s:%s/%s"%(self.__host,self.__port,method)
+                c=httplib.HTTPSConnection(self.__host,self.__port)
+            headers.update({'XPLR-Api-Key':self.__key})
+            if self.__app is not None:
+                headers.update({'XPLR-App-id':self.__app})
+            c.request('DELETE',method,body,headers)
+            r = c.getresponse()
+            data = r.read()
+        except:
+            raise XPLRCommunicationError(u,"DELETE",headers,None,r)
+
         LOG(data)
-        return json.loads(data)
+        try:
+            return json.loads(data)
+        except:
+            raise XPLRDataError(u,"DELETE",headers,None,data)
+
     
     # Public methods
 
