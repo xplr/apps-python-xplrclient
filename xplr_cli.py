@@ -63,8 +63,9 @@ def xplr_predict (args, xplr):
 
 def xplr_search (args, xplr):
     xplr_client.LOG('calling search')
-    for param in ['q',
-                  'documents_limit',
+    params={}
+    query = args.query    
+    for param in ['documents_limit',
                   'documents_topics_limit',
                   'found_topics_limit',
                   'related_topics_limit',
@@ -78,7 +79,7 @@ def xplr_search (args, xplr):
                   'extra_parameters']:
         if  param in dir(args) and getattr(args,param) is not None:
            params.update({param:getattr(args,param)}) 
-    dformat(xplr.search(data,**params))
+    dformat(xplr.search(query,**params))
     
 def xplr_dataset (args, xplr):
     xplr_client.LOG('calling dataset')
@@ -213,7 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('-H','--host', action='store',help="XPLR API host")
     parser.add_argument('-P','--port', action='store',help="XPLR API port", type=int)
     parser.add_argument('-K','--key', action='store', help="XPLR API key")
-    parser.add_argument("-S", "--ssl", action="store_true", default=True, help="use ssl on XPLR calls, default: true")
+    parser.add_argument("-S", "--ssl", action="store_true", default=False, help="use ssl on XPLR calls, default: False")
     
     parser.add_argument('-A','--app', action='store', help="XPLR application used for index/search operations")
 
@@ -242,7 +243,7 @@ if __name__ == '__main__':
     parser_mc.add_argument('-f','--fork', action='store',help="id of an existing model to fork")
     parser_mc.add_argument('-d','--description', action='store',help="long description")
     parser_mc.add_argument('-l','--lang', action='store',help="language")
-    parser_mc.add_argument('-q','--qualifiers', nargs="*" ,help="qualifiers")
+    parser_mc.add_argument('--qualifiers', nargs="*" ,help="qualifiers")
     parser_mc.add_argument('model', help='model identifier', metavar="<model_id>")
     parser_mc.set_defaults(act='create')
 
@@ -315,7 +316,7 @@ if __name__ == '__main__':
     # search 
     
     parser_s = subparsers.add_parser('search', help='Search in XPLR index by topics')
-    parser_s.add_argument('-q','--query', action='store',help="Search query")
+    parser_s.add_argument('--query', action='store',help="Search query")
     parser_s.add_argument('--documents_limit', action='store',help="Maximum number of documents expected",type=int)
     parser_s.add_argument('--document_topics_limit', action='store',help="Maximum number of topics expected per document",type=int)
     parser_s.add_argument('--found_topics_limit', action='store',help="Maximum number of topics expected",type=int)
@@ -425,6 +426,9 @@ if __name__ == '__main__':
     
     args = parser.parse_args(remaining_argv)
     xplr_client.LOG(args)
+    proto = 0
+    if args.ssl:
+        proto = 1
 
-    xplri=xplr_client.XPLR(args.key, args.host, port=int(args.port))
+    xplri=xplr_client.XPLR(args.key, args.host, port=int(args.port), app=args.app, proto=proto)
     args.callback(args, xplri)

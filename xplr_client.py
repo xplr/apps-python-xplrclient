@@ -81,7 +81,10 @@ class XPLRCommunicationError(Exception):
         self.req_headers = headers
         self.req_body = body
         self.url = url
-        self.res_headers = response.get_info()
+        self.res_headers = None
+        if response is not None:
+            self.res_headers = response.get_info()
+            
 
     def __str__(self):
         msg = "%s %s\n"%(str(self.http_method),str(self.url))
@@ -89,7 +92,7 @@ class XPLRCommunicationError(Exception):
             msg += "%s:%s\n"%(h,v)
         msg += "\n"
         if self.req_body is not None:
-            msg += str(self.req_body)
+            msg += str(self.req_body)[:100]
         msg += "\n"
         msg += "--\n"
         msg += str(self.res_headers)
@@ -109,6 +112,10 @@ class XPLRDataError(Exception):
 
     def __str__(self):
         msg = "%s %s\n"%(str(self.http_method),str(self.url))
+        if self.data is not None:
+            msg += str(self.data)[:100]
+        msg += "\n"
+        return msg
         for h,v in self.req_headers.iteritems():
             msg += "%s:%s\n"%(h,v)
         msg += "\n"
@@ -225,10 +232,10 @@ class XPLR(object):
         headers = {}
         try:
             if self.__proto == self.__HTTP:
-                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                u = "http://%s:%s%s"%(self.__host,self.__port,method)
                 c=httplib.HTTPConnection(self.__host,self.__port)
             else:
-                u = "https://%s:%s/%s"%(self.__host,self.__port,method)
+                u = "https://%s:%s%s"%(self.__host,self.__port,method)
                 c=httplib.HTTPSConnection(self.__host,self.__port)
             headers.update({'XPLR-Api-Key':self.__key})
             if self.__app is not None:
@@ -253,22 +260,22 @@ class XPLR(object):
         headers = {}
         try:
             if self.__proto == self.__HTTP:
-                LOG("curl -x POST 'http://%s:%s/%s' -H 'XPLR-Api-Key:%s' -H 'XPLR-App-id:%s' -d '%s'"%(self.__host,
+                LOG("curl -X POST 'http://%s:%s%s' -H 'XPLR-Api-Key:%s' -H 'XPLR-App-id:%s' -d '%s'"%(self.__host,
                                                                                                        self.__port,
                                                                                                        method,
                                                                                                        self.__key,
                                                                                                        self.__app,
                                                                                                        body))
-                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                u = "http://%s:%s%s"%(self.__host,self.__port,method)
                 c=httplib.HTTPConnection(self.__host,self.__port)
             else:
-                LOG("curl -k -x POST 'https://%s:%s/%s' -H 'XPLR-Api-Key:%s' -H 'XPLR-App-id:%s' -d '%s'"%(self.__host,
+                LOG("curl -k -X POST 'https://%s:%s%s' -H 'XPLR-Api-Key:%s' -H 'XPLR-App-id:%s' -d '%s'"%(self.__host,
                                                                                                            self.__port,
                                                                                                            method,
                                                                                                            self.__key,
                                                                                                            self.__app,
                                                                                                            body))
-                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                u = "http://%s:%s%s"%(self.__host,self.__port,method)
                 c=httplib.HTTPSConnection(self.__host,self.__port)
 
             headers.update({'XPLR-Api-Key':self.__key})
@@ -296,10 +303,10 @@ class XPLR(object):
         headers = {}
         try:
             if self.__proto == self.__HTTP:
-                u = "http://%s:%s/%s"%(self.__host,self.__port,method)
+                u = "http://%s:%s%s"%(self.__host,self.__port,method)
                 c=httplib.HTTPConnection(self.__host,self.__port)
             else:
-                u = "https://%s:%s/%s"%(self.__host,self.__port,method)
+                u = "https://%s:%s%s"%(self.__host,self.__port,method)
                 c=httplib.HTTPSConnection(self.__host,self.__port)
             headers.update({'XPLR-Api-Key':self.__key})
             if self.__app is not None:
@@ -463,7 +470,7 @@ class XPLR(object):
     def search(self, query, **options):
         """Search in the XPLR index
         query -- the searched words
-        options -- all avalaible options from XPLR recommend API
+        options -- all avalaible options from XPLR search API
         """
         params={}
         params.update({'q':query})
