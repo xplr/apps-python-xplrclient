@@ -61,7 +61,10 @@ def Config(appspec = None, alternatefile = None):
         config.read(os.path.expanduser('~/.xplrclient'))
     res={}
     # add xplr config
-    res.update({'xplr':dict(config.items("xplr"))})
+    try:
+        res.update({'xplr':dict(config.items("xplr"))})
+    except ConfigParser.NoSectionError:
+        res.update({'xplr':{}})
     # add additional config sections
     if not isinstance(appspec, list):
         appspec=[appspec]
