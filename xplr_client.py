@@ -30,6 +30,7 @@ import json
 import uuid
 
 VERBOSE=False
+XPLR_TIMEOUT = 300 # five minutes timeout to xplr requests
 
 def LOG(msg):
     """Output a log message."""
@@ -97,7 +98,7 @@ class XPLRCommunicationError(Exception):
         msg += "--\n"
         msg += str(self.res_headers)
         msg += "\n"
-        return str
+        return msg
 
 
 
@@ -125,7 +126,7 @@ class XPLRDataError(Exception):
         msg += "--\n"
         msg += str(self.data)
         msg += "\n"
-        return str
+        return msg
 
 
 API_METHODS_URL = {
@@ -162,6 +163,10 @@ class XPLR(object):
     predict_content: makes prediction from a provided text
     
     """
+    #return types
+    RETURN_PYTHON=0
+    RETURN_JSON=1
+    RETURN_NONE=2
 
     __HTTP=0
     __HTTPS=1
@@ -183,10 +188,24 @@ class XPLR(object):
         self.__port=port
         self.__app=app
         self.__proto=proto
+        self.__returntype=self.RETURN_PYTHON
         if proto == self.__HTTP:
             self.__xplrurl='http://%s:%d'%(host,port)
         else:
             self.__xplrurl='https://%s:%d'%(host,port)
+
+
+    def set_return_format(self,f):
+        assert f == self.RETURN_PYTHON or f == self.RETURN_JSON or f == self.RETURN_NONE
+        self.__returntype = f
+
+    def __return_format(self,js):
+        if self.__returntype == self.RETURN_PYTHON:
+            return json.loads(js)
+        elif self.__returntype == self.RETURN_JSON:
+            return js
+        else:
+            return None
 
     def __get(self, method, args=None):
         """Perform a GET request to xplr."""
@@ -213,13 +232,13 @@ class XPLR(object):
             if self.__app is not None:
                 req.add_header('XPLR-App-id',self.__app)
                 headers.update({'XPLR-App-id':self.__app})
-            response = urllib2.urlopen(req)
+            response = urllib2.urlopen(req, timeout=XPLR_TIMEOUT)
             jsonresponse=response.read()
         except:
             raise XPLRCommunicationError(u,"GET",headers,None,response)
         LOG(jsonresponse)
         try:
-            return json.loads(jsonresponse)
+            return self.__return_format(jsonresponse)
         except:
             raise XPLRDataError(u,"GET",headers,None,jsonresponse)
 
@@ -233,10 +252,10 @@ class XPLR(object):
         try:
             if self.__proto == self.__HTTP:
                 u = "http://%s:%s%s"%(self.__host,self.__port,method)
-                c=httplib.HTTPConnection(self.__host,self.__port)
+                c=httplib.HTTPConnection(self.__host,self.__port, timeout=XPLR_TIMEOUT)
             else:
                 u = "https://%s:%s%s"%(self.__host,self.__port,method)
-                c=httplib.HTTPSConnection(self.__host,self.__port)
+                c=httplib.HTTPSConnection(self.__host,self.__port, timeout=XPLR_TIMEOUT)
             headers.update({'XPLR-Api-Key':self.__key})
             if self.__app is not None:
                 headers.update({'XPLR-App-id':self.__app})
@@ -248,7 +267,7 @@ class XPLR(object):
 
         LOG(data)
         try:
-            return json.loads(data)
+            return self.__return_format(data)
         except:
             raise XPLRDataError(u,"PUT",headers,body,data)
     
@@ -267,7 +286,7 @@ class XPLR(object):
                                                                                                        self.__app,
                                                                                                        body))
                 u = "http://%s:%s%s"%(self.__host,self.__port,method)
-                c=httplib.HTTPConnection(self.__host,self.__port)
+                c=httplib.HTTPConnection(self.__host,self.__port, timeout=XPLR_TIMEOUT)
             else:
                 LOG("curl -k -X POST 'https://%s:%s%s' -H 'XPLR-Api-Key:%s' -H 'XPLR-App-id:%s' -d '%s'"%(self.__host,
                                                                                                            self.__port,
@@ -276,7 +295,7 @@ class XPLR(object):
                                                                                                            self.__app,
                                                                                                            body))
                 u = "http://%s:%s%s"%(self.__host,self.__port,method)
-                c=httplib.HTTPSConnection(self.__host,self.__port)
+                c=httplib.HTTPSConnection(self.__host,self.__port, timeout=XPLR_TIMEOUT)
 
             headers.update({'XPLR-Api-Key':self.__key})
             if self.__app is not None:
@@ -290,8 +309,11 @@ class XPLR(object):
 
         LOG(data)
         try:
-            return json.loads(data)
+            return self.__return_format(data)
         except:
+            import traceback
+            print traceback.format_exc()
+
             raise XPLRDataError(u,"POST",headers,body,data)
  
     def __delete(self, method):
@@ -304,10 +326,10 @@ class XPLR(object):
         try:
             if self.__proto == self.__HTTP:
                 u = "http://%s:%s%s"%(self.__host,self.__port,method)
-                c=httplib.HTTPConnection(self.__host,self.__port)
+                c=httplib.HTTPConnection(self.__host,self.__port, timeout=XPLR_TIMEOUT)
             else:
                 u = "https://%s:%s%s"%(self.__host,self.__port,method)
-                c=httplib.HTTPSConnection(self.__host,self.__port)
+                c=httplib.HTTPSConnection(self.__host,self.__port, timeout=XPLR_TIMEOUT)
             headers.update({'XPLR-Api-Key':self.__key})
             if self.__app is not None:
                 headers.update({'XPLR-App-id':self.__app})
@@ -319,7 +341,7 @@ class XPLR(object):
 
         LOG(data)
         try:
-            return json.loads(data)
+            return self.__return_format(data)
         except:
             raise XPLRDataError(u,"DELETE",headers,None,data)
 
@@ -461,9 +483,13 @@ class XPLR(object):
         params={}
         params.update(options)
         body = {"parameters":params}
-        body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
-        if title is not None:
-            body['document'].update({"title":title})
+        #body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
+        if options.get('structured_content',False):
+            body.update({"document":data})
+        else:
+            body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
+            if title is not None:
+                body['document'].update({"title":title})
         return self.__post(self.__urls["predict"], json.dumps(body))
 
 
