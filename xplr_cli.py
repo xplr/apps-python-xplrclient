@@ -61,6 +61,13 @@ def xplr_predict (args, xplr):
             params.update({'uri':args.uri})
         dformat(xplr.predict_content(data,**params))
 
+
+def xplr_delete (args, xplr):
+    xplr_client.LOG('calling predict')
+    dformat(xplr.delete(args.uri))
+
+
+
 def xplr_search (args, xplr):
     xplr_client.LOG('calling search')
     params={}
@@ -128,7 +135,6 @@ def xplr_learn (args, xplr):
 def xplr_recommend (args, xplr):
     xplr_client.LOG('calling recommend')
     model=args.model
-    dataset=xplr_client.XPLRDataset(arg.dataset)
     params={}
     for param in ['model',
                   'documents_limit',
@@ -199,7 +205,7 @@ if __name__ == '__main__':
                      'cli_learn',
                      'cli_recommend']
     if args.config:
-        config = xplr_client.Config(config_sections,args['config'])
+        config = xplr_client.Config(config_sections,args.config)
     else:
         config = xplr_client.Config(config_sections)
 
@@ -312,6 +318,17 @@ if __name__ == '__main__':
     # url interdit uri
 
     parser_p.set_defaults(**defaults)
+
+
+    # delete
+    
+    parser_d = subparsers.add_parser('delete',help= 'Delete an entry from the index')
+    parser_d.add_argument('-u','--uri', action='store',help="uri to delete")
+
+    defaults=config.get("cli_delete",{})
+    defaults.update({'callback':xplr_delete})
+
+    parser_d.set_defaults(**defaults)
 
     # search 
     
