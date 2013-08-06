@@ -131,6 +131,22 @@ class XPLRDataError(Exception):
         msg += "\n"
         return msg
 
+# hack for wrong encoded json
+# input : s : str object 
+# output ; unicode object
+
+def hack_decode(s):
+    if isinstance(s, unicode):
+        return s
+
+    while True:
+        try:
+            return s.decode('utf-8')
+        except UnicodeDecodeError, e :
+            s = s[:e.start]+'?'+s[e.end:]
+
+
+
 
 API_METHODS_URL = {
     "1.15e" : {
@@ -204,13 +220,13 @@ class XPLR(object):
 
     def __return_format(self,js):
         if self.__returntype == self.RETURN_PYTHON:
-            return json.loads(js)
+            return json.loads(hack_decode(js))
         elif self.__returntype == self.RETURN_JSON:
             return js
         else:
             return None
 
-    def __get(self, method, args=None):
+    def _get(self, method, args=None):
         """Perform a GET request to xplr."""
 
         u = self.__xplrurl
@@ -245,7 +261,7 @@ class XPLR(object):
         except:
             raise XPLRDataError(u,"GET",headers,None,jsonresponse)
 
-    def __put(self, method, body):
+    def _put(self, method, body):
         """Perform a PUT request to xplr."""
 
         LOG("PUT %s\n%s"%(method,body))
@@ -274,7 +290,7 @@ class XPLR(object):
         except:
             raise XPLRDataError(u,"PUT",headers,body,data)
     
-    def __post(self, method, body):
+    def _post(self, method, body):
         """Perform a POST request to xplr."""
 
         r = None
@@ -319,7 +335,7 @@ class XPLR(object):
 
             raise XPLRDataError(u,"POST",headers,body,data)
  
-    def __delete(self, method):
+    def _delete(self, method):
         """Perform a DELETE request to xplr."""
 
         LOG("DELETE %s"%(method))
@@ -353,7 +369,7 @@ class XPLR(object):
 
     def info(self):
         """Get information on the XPLR API server : avaliable model"""
-        return self.__get(self.__urls["info"])
+        return self._get(self.__urls["info"])
 
 
     # models
@@ -384,7 +400,7 @@ class XPLR(object):
             qs += "&words=false"
         if elements_limit is not None:
             qs += "&elements_limit=%d"%elements_limit
-        return self.__get(qs)
+        return self._get(qs)
     
     def create_model(self, model, description, lang, qualifiers=None, fork=None, topics_number=None, forkfile=None, forkkey=None):
         """Create a new model.
@@ -410,13 +426,13 @@ class XPLR(object):
                 body.update({"forkkey":forkkey})
         if  topics_number is not None:
             body.update({"topics_number":topics_number})
-        return self.__put(self.__urls["models"] + '/%s'%model,json.dumps(body))
+        return self._put(self.__urls["models"] + '/%s'%model,json.dumps(body))
 
 
     def delete_model(self,model):
         """Delete an existing model associated to the API key."""
 
-        return self.__delete(self.__urls["models"] + '/%s'%model)
+        return self._delete(self.__urls["models"] + '/%s'%model)
 
     def update_model(self, model, update_words=True, auto_labeling=True, labels=None):
         """Update an existing model associated to tu user API key.
@@ -433,7 +449,7 @@ class XPLR(object):
                 "auto_labeling":auto_labelling}
         if labels is not None:
             body.update({"labels":labels})
-        return self.__post(self.__urls["models"] + '/%s'%model, json.dumps(body))
+        return self._post(self.__urls["models"] + '/%s'%model, json.dumps(body))
 
     
     # learn (iterator)
@@ -455,7 +471,7 @@ class XPLR(object):
         body = {"parameters":params}
         for docs in dataset.iterdocs(chunk_size):
             body.update({"collection":docs})
-            yield self.__post(self.__urls["learn"], json.dumps(body))
+            yield self._post(self.__urls["learn"], json.dumps(body))
         return 
 
     # predict
@@ -472,7 +488,7 @@ class XPLR(object):
         params.update(options)
         body = {"parameters":params}
         body.update({"document":{"uri":uri}})
-        return self.__post(self.__urls["predict"], json.dumps(body))
+        return self._post(self.__urls["predict"], json.dumps(body))
 
     def predict_content(self, data, content_type="text/plain", uri=str(uuid.uuid1()), title=None, **options):
         """Predict a content from data
@@ -493,7 +509,7 @@ class XPLR(object):
             body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
             if title is not None:
                 body['document'].update({"title":title})
-        return self.__post(self.__urls["predict"], json.dumps(body))
+        return self._post(self.__urls["predict"], json.dumps(body))
 
 
     def search(self, query, **options):
@@ -501,11 +517,13 @@ class XPLR(object):
         query -- the searched words
         options -- all avalaible options from XPLR search API
         """
+        # print "XPLR SEARCH", query
+        # print options
         params={}
         params.update({'q':query})
         params.update(options)
         body = {"parameters":params}
-        return self.__post(self.__urls["search"], json.dumps(body))
+        return self._post(self.__urls["search"], json.dumps(body))
 
     def recommend_uri(self, uri, **options):
         """Recommend from the content located at a given url.
@@ -519,7 +537,7 @@ class XPLR(object):
         params.update(options)
         body = {"parameters":params}
         body.update({"document":{"uri":uri}})
-        return self.__post(self.__urls["recommend"], json.dumps(body))
+        return self._post(self.__urls["recommend"], json.dumps(body))
 
     def recommend_content(self, data, content_type="text/plain", uri=str(uuid.uuid1()), title=None, **options):
         """Recommend from a content from data
@@ -536,7 +554,7 @@ class XPLR(object):
         body.update({"document":{"content":data,"content_type":content_type,"uri":uri}})
         if title is not None:
             body['document'].update({"title":title})
-        return self.__post(self.__urls["recommend"], json.dumps(body))
+        return self._post(self.__urls["recommend"], json.dumps(body))
 
 
     
